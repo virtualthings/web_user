@@ -41,7 +41,7 @@ tests_require = ['proteus >= %s, < %s' % branch_range]
 setup(
     name='%s_%s' % (PREFIX, MODULE),
     version=version_info,
-    description='Tryton module with web user from %s' % (MODULE, PREFIX),
+    description='Tryton module with web user from %s' % PREFIX,
     long_description=read('README'),
     author='virtual things',
     author_email='info@virtual-things.biz',
