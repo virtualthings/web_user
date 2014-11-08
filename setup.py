@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-#This file is part of Tryton.  The COPYRIGHT file at the top level of
-#this repository contains the full copyright notices and license terms.
-
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
 from setuptools import setup
 import re
 import os
 import ConfigParser
+
+MODULE = 'web_user'
+PREFIX = 'virtualthings'
+MODULE2PREFIX = {}
 
 
 def read(fname):
@@ -17,36 +20,45 @@ info = dict(config.items('tryton'))
 for key in ('depends', 'extras_depend', 'xml'):
     if key in info:
         info[key] = info[key].strip().splitlines()
-major_version, minor_version, _ = info.get('version', '0.0.1').split('.', 2)
-major_version = int(major_version)
-minor_version = int(minor_version)
-
+version_info = info.get('version', '0.0.1')
+branch, _ = version_info.rsplit('.', 1)
+dev_branch = float(branch) * 10
+# Warning: Check, after version 3.9 must follow 4.0. This calculation only
+# works if the Tryton project follows a strict sequence version number policy.
+if not (dev_branch % 2):  # dev_branch is a release branch
+    dev_branch -= 1
+next_branch = dev_branch + 2
+branch_range = str(dev_branch / 10), str(next_branch / 10)
 requires = []
+
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res|webdav)(\W|$)', dep):
-        requires.append('trytond_%s >= %s.%s, < %s.%s' %
-            (dep, major_version, minor_version, major_version,
-                minor_version + 1))
-requires.append('trytond >= %s.%s, < %s.%s' %
-    (major_version, minor_version, major_version, minor_version + 1))
+        prefix = MODULE2PREFIX.get(dep, 'trytond')
+        requires += ['%s_%s >= %s, < %s' % ((prefix, dep,) + branch_range)]
+requires += ['trytond >= %s, < %s' % branch_range]
+tests_require = ['proteus >= %s, < %s' % branch_range]
 
-setup(name='trytond_web_user',
-    version=info.get('version', '0.0.1'),
-    description='Tryton module with Web user',
+setup(
+    name='%s_%s' % (PREFIX, MODULE),
+    version=version_info,
+    description='Tryton module with web user from %s' % (MODULE, PREFIX),
     long_description=read('README'),
-    author='Tryton',
-    url='http://www.tryton.org/',
-    download_url=("http://downloads.tryton.org/" +
-        info.get('version', '0.0.1').rsplit('.', 1)[0] + '/'),
-    package_dir={'trytond.modules.web_user': '.'},
+    author='virtual things',
+    author_email='info@virtual-things.biz',
+    url='https://github.com/virtualthings/web_user',
+    download_url='https://github.com/%s/'
+        '%s/archive/%s.zip' % (PREFIX, MODULE, dev_branch + 1),
+    package_dir={'trytond.modules.%s' % MODULE: '.'},
     packages=[
-        'trytond.modules.web_user',
-        'trytond.modules.web_user.tests',
-        ],
+        'trytond.modules.%s' % MODULE,
+        'trytond.modules.%s.tests' % MODULE,
+    ],
     package_data={
-        'trytond.modules.web_user': (info.get('xml', [])
-            + ['tryton.cfg', 'view/*.xml', 'locale/*.po']),
-        },
+        'trytond.modules.%s' % MODULE: (
+            info.get('xml', []) + [
+                '*.odt', '*.ods', 'icons/*.svg', 'tryton.cfg', 'view/*.xml',
+                'locale/*.po', 'tests/*.rst']),
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Plugins',
@@ -56,31 +68,24 @@ setup(name='trytond_web_user',
         'Intended Audience :: Legal Industry',
         'Intended Audience :: Manufacturing',
         'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Natural Language :: Bulgarian',
-        'Natural Language :: Catalan',
-        'Natural Language :: Czech',
-        'Natural Language :: Dutch',
         'Natural Language :: English',
-        'Natural Language :: French',
         'Natural Language :: German',
-        'Natural Language :: Russian',
-        'Natural Language :: Slovenian',
-        'Natural Language :: Spanish',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Office/Business',
-        ],
+    ],
     license='GPL-3',
     install_requires=requires,
     extras_require={
         'BCrypt': ['bcrypt'],
-        },
+    },
     zip_safe=False,
     entry_points="""
     [trytond.modules]
-    web_user = trytond.modules.web_user
-    """,
+    %s = trytond.modules.%s
+    """ % (MODULE, MODULE),
     test_suite='tests',
     test_loader='trytond.test_loader:Loader',
-    )
+    tests_require=tests_require,
+)
+
