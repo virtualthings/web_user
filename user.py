@@ -53,7 +53,7 @@ class User(ModelSQL, ModelView):
 
     @classmethod
     def authenticate(cls, email, password):
-        users = cls.search([('email', '=', email)])
+        users = cls.search([('email', 'ilike', email)])
         if not users:
             return
         user, = users
